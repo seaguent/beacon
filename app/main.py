@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.database import Base, engine, get_db
 from app.models import Event
+from app.redis_client import DELIVERY_QUEUE, redis_client
 from app.schemas import EventCreate, EventOut
 
 Base.metadata.create_all(bind=engine)
@@ -16,6 +17,9 @@ def create_event(event: EventCreate, db: Session = Depends(get_db)):
     db.add(db_event)
     db.commit()
     db.refresh(db_event)
+
+    redis_client.lpush(DELIVERY_QUEUE, str(db_event.id))
+
     return db_event
 
 

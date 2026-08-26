@@ -1,3 +1,5 @@
+import json
+
 from fastapi import Depends, FastAPI
 from sqlalchemy.orm import Session
 
@@ -18,7 +20,8 @@ def create_event(event: EventCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_event)
 
-    redis_client.lpush(DELIVERY_QUEUE, str(db_event.id))
+    job = json.dumps({"event_id": str(db_event.id), "attempt_number": 1})
+    redis_client.lpush(DELIVERY_QUEUE, job)
 
     return db_event
 

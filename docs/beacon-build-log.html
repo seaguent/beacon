@@ -703,7 +703,7 @@
       <div class="callout fix">
         <span class="callout-label">Fix (three parts)</span>
         <ul>
-          <li>Removed schema creation from the worker entirely &mdash; it now lives only in the API, run exactly once.</li>
+          <li>Removed schema creation from the delivery worker entirely, so it no longer races across all 8 replicas. It still lives in <code>app/main.py</code> at module level, which technically runs once per API process &mdash; with <code>--workers 4</code>, that's up to 4 times, not truly once. Lower collision risk than 8-way, but not a complete guarantee; a fully correct fix would be a one-shot init step (or a real migration tool like Alembic) run before any app process starts.</li>
           <li>Wrapped the per-job processing call in a try/except, so one bad job (a deadlock, a network blip, anything) gets logged and skipped instead of crashing the whole process.</li>
           <li>Added <code>restart: unless-stopped</code> as defense-in-depth, in case something else unexpected still slips through.</li>
         </ul>
@@ -711,7 +711,7 @@
 
       <div class="callout bug">
         <span class="callout-label">Bug 4 &mdash; event creation and queueing aren't atomic</span>
-        <p>Found by comparing Locust's own tracked request count against the actual row count in Postgres after a test: <strong>33 events (1.4% of a 2,443-event batch) were committed to the database but never entered the Redis queue at all</strong> &mdash; zero delivery attempts, and both Redis queues confirmed empty, so nothing was left to process them. Saving an event to Postgres and pushing it onto the queue are two separate steps in <code>create_event</code>, not one atomic operation. An interruption between them &mdash; here, tied to the test harness (Locust) abruptly cutting off in-flight requests at the run's time limit &mdash; can silently orphan an event before it's ever queued for delivery.</p>
+        <p>Locust's tracked request count (2,317) and Postgres's actual row count (2,443) disagreed by 126 &mdash; mostly a measurement artifact, since Locust stops counting a request if its response arrives after the run's cutoff even though the server finished it. But inspecting the database directly, not just that raw gap, surfaced a real bug inside it: <strong>33 of the 2,443 events (1.4%) were committed to Postgres but never entered the Redis queue at all</strong> &mdash; confirmed by zero rows in <code>delivery_attempts</code> for them, with both Redis queues empty, meaning nothing was ever left to process them. Saving an event to Postgres and pushing it onto the queue are two separate steps in <code>create_event</code>, not one atomic operation. An interruption between them &mdash; here, tied to the same test-harness cutoff timing &mdash; can silently orphan an event before it's ever queued for delivery.</p>
       </div>
       <div class="callout" style="border-left-color:var(--text-faint)">
         <span class="callout-label" style="color:var(--text-faint)">Not fixed</span>
@@ -719,14 +719,14 @@
       </div>
 
       <h3>Real measured numbers</h3>
-      <p>Every number below is from a committed CSV in <code>loadtest/</code>, re-verified directly against the file contents rather than trusted from console output alone (a console reading and its corresponding CSV disagreed at one point during this process &mdash; the CSV file is treated as the authoritative source).</p>
+      <p>Ingestion latency and throughput numbers below are from committed Locust CSVs in <code>loadtest/</code>, re-verified directly against the file contents rather than trusted from console output alone (a console reading and its corresponding CSV disagreed at one point during this process &mdash; the CSV file is treated as the authoritative source). The delivery-outcome counts (delivered/failed/orphaned) are from a committed database count export, <code>results_reliability_db_counts.csv</code>, taken right after that same run.</p>
 
       <div class="metrics">
         <div class="metric"><p class="metric-label">Before fix: req/s</p><p class="metric-value">9.4</p></div>
         <div class="metric"><p class="metric-label">Before: failures</p><p class="metric-value">11.74%</p></div>
         <div class="metric"><p class="metric-label">After fix: req/s</p><p class="metric-value">178</p></div>
         <div class="metric"><p class="metric-label">After: failures</p><p class="metric-value">1.53%</p></div>
-        <div class="metric"><p class="metric-label">Throughput gain</p><p class="metric-value">~35x</p></div>
+        <div class="metric"><p class="metric-label">More requests completed</p><p class="metric-value">~35x</p></div>
         <div class="metric"><p class="metric-label">Failure reduction</p><p class="metric-value">~87%</p></div>
       </div>
       <p>Baseline (unfixed): 298 requests in 60s, 35 failures. After sizing the connection pool and adding multiple uvicorn processes: 10,497 requests in 60s, 161 failures, p50 300ms, p95 870ms. A separate, tracked-to-completion reliability run (2,443 events created) found 2,408 delivered and 2 permanently failed &mdash; <strong>99.9% eventual delivery success among events that entered the pipeline</strong> (2,410 of 2,443; the other 33 are Bug 4, above).</p>

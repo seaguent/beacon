@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import styles from "./page.module.css";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE =
+  typeof window !== "undefined"
+    ? `http://${window.location.hostname}:8000`
+    : "http://localhost:8000";
 
 type EventRow = {
   id: string;

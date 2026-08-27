@@ -6,15 +6,13 @@ import time
 
 import requests
 
-from app.database import Base, SessionLocal, engine
+from app.database import SessionLocal
 from app.models import DeliveryAttempt, Event
 from app.redis_client import DEAD_LETTER_QUEUE, DELIVERY_QUEUE, RETRY_QUEUE, redis_client
 
-Base.metadata.create_all(bind=engine)
-
 WORKER_ID = os.getpid()
-MAX_RETRIES = 4  # total attempts allowed before giving up
-BACKOFF_SCHEDULE = [5, 30, 120, 300]  # seconds to wait before attempt 2, 3, 4, 5
+MAX_RETRIES = 4
+BACKOFF_SCHEDULE = [5, 30, 120, 300]
 WEBHOOK_SIGNING_SECRET = os.environ["WEBHOOK_SIGNING_SECRET"]
 
 
@@ -108,7 +106,10 @@ def main() -> None:
             continue
         _, job = result
         data = json.loads(job)
-        process_event(data["event_id"], data["attempt_number"])
+        try:
+            process_event(data["event_id"], data["attempt_number"])
+        except Exception as e:
+            print(f"[worker {WORKER_ID}] unhandled error processing {data['event_id']}: {e}")
 
 
 if __name__ == "__main__":

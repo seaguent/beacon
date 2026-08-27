@@ -1,4 +1,5 @@
 import json
+import os
 import time
 from datetime import datetime, timezone
 
@@ -19,13 +20,13 @@ app = FastAPI(title="Beacon")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 RATE_LIMIT_WINDOW_SECONDS = 60
-RATE_LIMIT_MAX_REQUESTS = 20  # per client IP, per window
+RATE_LIMIT_MAX_REQUESTS = int(os.environ.get("RATE_LIMIT_MAX_REQUESTS", "20"))
 
 
 def queue_event(db_event: Event) -> None:

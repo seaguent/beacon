@@ -24,7 +24,6 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/0
       WEBHOOK_SIGNING_SECRET: ${WEBHOOK_SIGNING_SECRET}
-      RATE_LIMIT_MAX_REQUESTS: "100000"
     depends_on:
       - postgres
       - redis

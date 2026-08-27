@@ -1,3 +1,4 @@
 Method,Name,Error,Occurrences
-POST,/events,HTTPError('500 Server Error: Internal Server Error for url: /events'),96
-POST,/events,RemoteDisconnected('Remote end closed connection without response'),4
+POST,/events,HTTPError('500 Server Error: Internal Server Error for url: /events'),134
+POST,/events,"ConnectionAbortedError(10053, 'An established connection was aborted by the software in your host machine', None, 10053, None)",1
+POST,/events,RemoteDisconnected('Remote end closed connection without response'),26

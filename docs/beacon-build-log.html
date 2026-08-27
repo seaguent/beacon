@@ -676,7 +676,7 @@
     <section class="phase" id="phase-12">
       <p class="phase-eyebrow">Phase 12</p>
       <h2>Load testing: found real bugs, not just numbers</h2>
-      <p class="dek">Built a Locust load test and a deliberately flaky fake receiver (80% success / 10% error / 5% slow / 5% disconnect) to generate real numbers under real failure conditions &mdash; and along the way, found three genuine production bugs.</p>
+      <p class="dek">Built a Locust load test and a deliberately flaky fake receiver (80% success / 10% error / 5% slow / 5% disconnect) to generate real numbers under real failure conditions &mdash; and along the way, found four genuine production bugs.</p>
 
       <div class="callout bug">
         <span class="callout-label">Bug 1 &mdash; connection pool exhaustion</span>
@@ -709,20 +709,31 @@
         </ul>
       </div>
 
-      <h3>Real measured numbers</h3>
-      <div class="metrics">
-        <div class="metric"><p class="metric-label">Peak throughput</p><p class="metric-value">650 req/s</p></div>
-        <div class="metric"><p class="metric-label">Requests / 60s</p><p class="metric-value">39,140</p></div>
-        <div class="metric"><p class="metric-label">Failure rate</p><p class="metric-value">0%</p></div>
-        <div class="metric"><p class="metric-label">p50 latency</p><p class="metric-value">430ms</p></div>
-        <div class="metric"><p class="metric-label">p95 latency</p><p class="metric-value">640ms</p></div>
-        <div class="metric"><p class="metric-label">p99 latency</p><p class="metric-value">810ms</p></div>
+      <div class="callout bug">
+        <span class="callout-label">Bug 4 &mdash; event creation and queueing aren't atomic</span>
+        <p>Found by comparing Locust's own tracked request count against the actual row count in Postgres after a test: <strong>33 events (1.4% of a 2,443-event batch) were committed to the database but never entered the Redis queue at all</strong> &mdash; zero delivery attempts, and both Redis queues confirmed empty, so nothing was left to process them. Saving an event to Postgres and pushing it onto the queue are two separate steps in <code>create_event</code>, not one atomic operation. An interruption between them &mdash; here, tied to the test harness (Locust) abruptly cutting off in-flight requests at the run's time limit &mdash; can silently orphan an event before it's ever queued for delivery.</p>
       </div>
-      <p>A separate, tracked-to-completion run against the flaky receiver (2,428 events) measured <strong>99.6% eventual delivery success</strong> &mdash; close to the theoretical prediction: since each attempt independently has roughly an 80% success chance, the odds of an event failing all 4 attempts are about 0.2<sup>4</sup> &asymp; 0.16%, meaning &asymp;99.84% should eventually succeed within the retry budget.</p>
+      <div class="callout" style="border-left-color:var(--text-faint)">
+        <span class="callout-label" style="color:var(--text-faint)">Not fixed</span>
+        <p>Documented as a known limitation rather than fixed &mdash; a real fix would need something like an outbox pattern (write the "needs queueing" intent in the same transaction as the event, with a separate process guaranteeing it eventually gets queued) or wrapping both steps so a failure after the DB commit gets retried. Good "what would you improve" interview answer, same category as the worker crash-recovery gap.</p>
+      </div>
+
+      <h3>Real measured numbers</h3>
+      <p>Every number below is from a committed CSV in <code>loadtest/</code>, re-verified directly against the file contents rather than trusted from console output alone (a console reading and its corresponding CSV disagreed at one point during this process &mdash; the CSV file is treated as the authoritative source).</p>
+
+      <div class="metrics">
+        <div class="metric"><p class="metric-label">Before fix: req/s</p><p class="metric-value">9.4</p></div>
+        <div class="metric"><p class="metric-label">Before: failures</p><p class="metric-value">11.74%</p></div>
+        <div class="metric"><p class="metric-label">After fix: req/s</p><p class="metric-value">178</p></div>
+        <div class="metric"><p class="metric-label">After: failures</p><p class="metric-value">1.53%</p></div>
+        <div class="metric"><p class="metric-label">Throughput gain</p><p class="metric-value">~35x</p></div>
+        <div class="metric"><p class="metric-label">Failure reduction</p><p class="metric-value">~87%</p></div>
+      </div>
+      <p>Baseline (unfixed): 298 requests in 60s, 35 failures. After sizing the connection pool and adding multiple uvicorn processes: 10,497 requests in 60s, 161 failures, p50 300ms, p95 870ms. A separate, tracked-to-completion reliability run (2,443 events created) found 2,408 delivered and 2 permanently failed &mdash; <strong>99.9% eventual delivery success among events that entered the pipeline</strong> (2,410 of 2,443; the other 33 are Bug 4, above).</p>
 
       <div class="callout" style="border-left-color:var(--text-faint)">
         <span class="callout-label" style="color:var(--text-faint)">Honest note</span>
-        <p>Peak-throughput numbers varied noticeably between runs on this laptop (190&ndash;650 req/s for identical code) because Locust itself competes for the same CPU as the containers it's testing. This is a well-known limitation of laptop-based load testing, not a code regression &mdash; real load testing infrastructure runs the load generator and the system under test on separate machines specifically to avoid this. The correctness of the fixes was verified independently of the exact throughput number, by confirming zero crashes across repeated 8-worker scale-up tests.</p>
+        <p>Raw throughput numbers vary noticeably between runs on this laptop because Locust itself competes for the same CPU as the containers it's testing &mdash; repeated "after fix" runs during this process landed anywhere from 178 to a few hundred req/s, never approaching an earlier, no-longer-reproducible measurement this document used to cite (650 req/s), which turned out not to be backed by a surviving committed CSV and was replaced with the verified numbers above. This is a well-known limitation of laptop-based load testing, not a code regression &mdash; real load testing infrastructure runs the load generator and the system under test on separate machines specifically to avoid this. The before/after <em>comparison</em> (~35x, ~87%) is what's actually reproducible and meaningful, more so than either absolute number alone.</p>
       </div>
     </section>
 
@@ -804,6 +815,7 @@
       <h2>Known limitations</h2>
       <p class="dek">Said out loud, on purpose &mdash; naming these is more credible than pretending they don't exist.</p>
       <ul>
+        <li>Event creation and queueing aren't atomic &mdash; found under load testing (Phase 12, Bug 4). An interruption between the Postgres commit and the Redis push can silently orphan an event before it's ever queued.</li>
         <li>No worker crash-recovery (visibility-timeout) pattern &mdash; a job popped from the queue is lost if the worker dies before finishing it.</li>
         <li>HMAC signing uses one global secret per instance, not a secret per registered destination (no endpoint-registration concept exists).</li>
         <li>Rate limiting uses a fixed window, which allows a small burst at the window boundary; a sliding window or token bucket would smooth that at the cost of needing a Lua script to stay atomic.</li>

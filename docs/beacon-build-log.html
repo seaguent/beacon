@@ -434,7 +434,7 @@
       <h3>Redis</h3>
       <p>Redis does three distinct jobs in this architecture, which is exactly why it was chosen over a heavier dedicated message broker like RabbitMQ, AWS SQS, or Kafka:</p>
       <ul>
-        <li><strong>A list</strong> (<code>LPUSH</code>/<code>BRPOP</code>) as the main delivery queue &mdash; simple FIFO, no need for Kafka-style partitioned ordering or SQS-style visibility timeouts at this scale.</li>
+        <li><strong>A list</strong> (<code>LPUSH</code>/<code>BRPOP</code>) as the main delivery queue &mdash; simple FIFO, no need for Kafka-style partitioned ordering. I accepted simpler queue semantics here for project scope, without SQS-style visibility timeouts &mdash; that's a real tradeoff, not a free lunch: it's exactly what creates the worker-crash job-loss window documented as a known limitation later.</li>
         <li><strong>A sorted set</strong> as a delay mechanism for scheduling retries &mdash; score by the timestamp a retry becomes due, which a plain list can't express at all.</li>
         <li><strong>Atomic counters</strong> (<code>INCR</code>) for the rate limiter &mdash; race-free without any extra locking.</li>
       </ul>
@@ -689,7 +689,7 @@
 
       <div class="callout bug">
         <span class="callout-label">Bug 2 &mdash; single-process saturation</span>
-        <p>Even with the pool fixed, a single uvicorn process's internal thread pool (used to run synchronous route handlers) saturated under load &mdash; and backed up <em>unrelated</em> traffic too: the dashboard's own background polling started hanging behind the load test's requests, since everything shared one process's limited thread pool.</p>
+        <p>Even with the pool fixed, a single API process saturated under load. Our route handlers are synchronous <code>def</code> functions, and FastAPI/Starlette runs those in an external AnyIO-backed thread pool rather than directly on the event loop &mdash; that thread pool has a size limit, and once it filled up under 500 concurrent requests, it backed up <em>unrelated</em> traffic too: the dashboard's own background polling started hanging behind the load test's requests, since everything in that process shared the same limited pool.</p>
       </div>
       <div class="callout fix">
         <span class="callout-label">Fix</span>
@@ -786,7 +786,7 @@
 
       <div class="qa">
         <p class="q">How do you prevent duplicate webhook deliveries?</p>
-        <p class="a">Beacon reduces duplicates in two places, but doesn't guarantee exactly-once delivery. Idempotency keys prevent a client from accidentally creating the same <em>event</em> twice (enforced by a database unique constraint, safe under concurrent requests). Separately, the atomic <code>ZREM</code>-as-claim pattern in the retry-promotion logic prevents two <em>workers</em> from both delivering the same already-queued job. What it doesn't cover: if a destination actually processes a request but responds too slowly, Beacon's 10-second timeout treats that as a failure and retries it anyway &mdash; the destination could receive the same webhook twice through that path. True exactly-once delivery across a network isn't actually achievable in general; this is "at-least-once with strong duplicate reduction," which is the honest framing.</p>
+        <p class="a">Beacon reduces duplicates in two places, but doesn't guarantee exactly-once delivery. Idempotency keys prevent a client from accidentally creating the same <em>event</em> twice (enforced by a database unique constraint, safe under concurrent requests). Separately, the atomic <code>ZREM</code>-as-claim pattern in the retry-promotion logic prevents two <em>workers</em> from both delivering the same already-queued job. What it doesn't cover: if a destination actually processes a request but responds too slowly, Beacon's 10-second timeout treats that as a failure and retries it anyway &mdash; the destination could receive the same webhook twice through that path. Beacon uses retries and duplicate-reduction mechanisms, but does not currently provide a formal at-least-once or exactly-once delivery guarantee &mdash; the documented queueing (Bug 4) and worker-crash (Phase 6) failure windows mean a job can genuinely be lost, not just duplicated, so "at-least-once" isn't accurate terminology for what's actually implemented here.</p>
       </div>
 
       <div class="qa">

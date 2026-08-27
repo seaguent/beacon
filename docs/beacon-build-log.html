@@ -408,7 +408,7 @@
         <span>&middot;</span>
         <span>~700 lines of application code</span>
         <span>&middot;</span>
-        <span>3 real production bugs found &amp; fixed under load</span>
+        <span>4 production-style bugs found under load &middot; 3 fixed &middot; 1 documented</span>
         <span>&middot;</span>
         <span>Deployed live on AWS EC2</span>
       </div>
@@ -447,7 +447,7 @@
       <p>Every service (API, worker, Postgres, Redis, dashboard) runs in its own container, defined in one <code>docker-compose.yml</code>. This makes the whole system reproducible with a single command on any machine, and is also literally how it's deployed to AWS &mdash; the same file that runs locally runs in production.</p>
 
       <h3>AWS EC2</h3>
-      <p>EC2 was chosen over AWS Lambda specifically because this system has a <strong>persistent background process</strong> &mdash; the worker sits in a loop polling Redis, which doesn't fit serverless's request-in/response-out model at all. EC2 was chosen over ECS/Fargate (container orchestration services) because a single EC2 instance running Docker Compose is functionally identical for a project at this scale, without needing to learn or configure a separate orchestration layer, task definitions, or a load balancer.</p>
+      <p>Beacon's worker is a <strong>persistent polling process</strong> &mdash; it sits in a loop calling <code>BRPOP</code> against Redis. That architecture maps naturally onto an always-on host like EC2. Lambda can absolutely do async/background work too (driven by SQS or other event sources), but adopting it here would mean redesigning the worker around event-driven invocations rather than a long-lived poll loop &mdash; a real rearchitecture, not a drop-in swap. EC2 was chosen over ECS/Fargate (container orchestration services) because a single EC2 instance running Docker Compose is functionally identical for a project at this scale, without needing to learn or configure a separate orchestration layer, task definitions, or a load balancer.</p>
 
       <h3>Locust</h3>
       <p>Locust is Python-native, so load-testing scripts live in the same language as the rest of the project, versus k6 (JavaScript) or JMeter (XML config, GUI-first). It also generates real percentile latency reports (p50/p95/p99) out of the box.</p>
@@ -463,7 +463,7 @@
 
       <div class="callout decision">
         <span class="callout-label">Decision</span>
-        <p>UUIDs were used as primary keys instead of auto-incrementing integers. An auto-increment ID requires a round-trip to the database to know the "next" value, which becomes a real bottleneck once multiple processes (API replicas, workers) are inserting concurrently. A UUID can be generated client-side or worker-side with no coordination at all.</p>
+        <p>UUIDs were used as primary keys instead of auto-incrementing integers. This allows decentralized ID generation &mdash; a UUID can be generated client-side or worker-side with no coordination at all &mdash; and avoids relying on a sequential, database-generated identifier. (To be precise: Postgres sequences are actually built to handle concurrent inserts well, so "auto-increment would bottleneck" isn't the strongest version of this argument; the real win is not needing the database in the loop at all to mint an ID.)</p>
       </div>
 
       <div class="callout decision">
@@ -556,7 +556,7 @@
     <section class="phase" id="phase-5">
       <p class="phase-eyebrow">Phase 5</p>
       <h2>Idempotency keys</h2>
-      <p class="dek">A client can safely retry a <code>POST /events</code> call (say, after a network timeout where it's unsure the first attempt landed) without creating a duplicate event, by sending an <code>Idempotency-Key</code> header &mdash; the same pattern Stripe and GitHub use.</p>
+      <p class="dek">A client can safely retry a <code>POST /events</code> call (say, after a network timeout where it's unsure the first attempt landed) without creating a duplicate event, by sending an <code>Idempotency-Key</code> header &mdash; the same pattern Stripe uses. (GitHub's webhook system solves a related problem differently, with unique delivery GUIDs for redelivery, not this same request-header pattern.)</p>
 
       <div class="callout decision">
         <span class="callout-label">Decision</span>
@@ -595,7 +595,7 @@
     <section class="phase" id="phase-7">
       <p class="phase-eyebrow">Phase 7</p>
       <h2>Dead-letter queue</h2>
-      <p class="dek">An event that exhausts all 4 retry attempts doesn't just disappear into a <code>failed</code> status buried in a table &mdash; it becomes something explicitly visible and recoverable.</p>
+      <p class="dek">An event that exhausts all 4 delivery attempts doesn't just disappear into a <code>failed</code> status buried in a table &mdash; it becomes something explicitly visible and recoverable.</p>
 
       <div class="callout decision">
         <span class="callout-label">Decision</span>
@@ -659,7 +659,7 @@
 
       <div class="callout decision">
         <span class="callout-label">Decision</span>
-        <p>The dashboard's Docker build uses <strong>3 stages</strong> (<code>deps</code> &rarr; <code>builder</code> &rarr; <code>runner</code>). The final image only copies in the <em>built</em> output and production <code>node_modules</code>, not the full Node dev toolchain used to build it &mdash; smaller image, no leaked build-time tooling.</p>
+        <p>The dashboard's Docker build uses <strong>3 stages</strong> (<code>deps</code> &rarr; <code>builder</code> &rarr; <code>runner</code>), so the final image doesn't need the full Node dev toolchain used to build it. As currently written the runner stage still copies the builder's entire <code>node_modules</code> (dev dependencies included, since <code>npm ci</code> installs them by default) &mdash; the multi-stage split is real, but the final image isn't yet pruned to production-only dependencies. An <code>npm prune --omit=dev</code> step would close that gap.</p>
       </div>
 
       <div class="callout decision">
@@ -770,7 +770,7 @@
         <li>Security group opened ports 22 (SSH), 8000 (API), and 3000 (dashboard).</li>
         <li>SSH access is key-pair only, no password auth &mdash; the default and the safer option even with the security group open to all IPs.</li>
         <li>An AWS budget alert was configured to email at a low spend threshold as an early warning, separate from (and cheaper to check than) manually watching the AWS bill.</li>
-        <li>HTTPS was deliberately not pursued for this deployment &mdash; it would require owning a domain name (recurring cost) and a reverse proxy with a TLS certificate, real infrastructure work disproportionate to a demo instance meant to be spun up and torn down. Certificate authorities won't issue a trusted cert for a bare IP address at all.</li>
+        <li>HTTPS was deliberately not pursued for this deployment &mdash; setting up a reverse proxy and a TLS certificate is real infrastructure work disproportionate to a demo instance meant to be spun up and torn down. (Note: short-lived trusted certificates for bare IP addresses became publicly available from Let's Encrypt in 2026, so "no CA will issue one" is no longer accurate as a blanket reason &mdash; the actual reason to skip it here is scope, not technical impossibility.)</li>
       </ul>
     </section>
 
@@ -786,7 +786,7 @@
 
       <div class="qa">
         <p class="q">How do you prevent duplicate webhook deliveries?</p>
-        <p class="a">Two separate mechanisms, for two separate failure modes. Idempotency keys prevent a client from accidentally creating the same event twice (enforced by a database unique constraint, safe under concurrent requests). Separately, the atomic <code>ZREM</code>-as-claim pattern in the retry-promotion logic prevents two <em>workers</em> from both delivering the same already-queued job.</p>
+        <p class="a">Beacon reduces duplicates in two places, but doesn't guarantee exactly-once delivery. Idempotency keys prevent a client from accidentally creating the same <em>event</em> twice (enforced by a database unique constraint, safe under concurrent requests). Separately, the atomic <code>ZREM</code>-as-claim pattern in the retry-promotion logic prevents two <em>workers</em> from both delivering the same already-queued job. What it doesn't cover: if a destination actually processes a request but responds too slowly, Beacon's 10-second timeout treats that as a failure and retries it anyway &mdash; the destination could receive the same webhook twice through that path. True exactly-once delivery across a network isn't actually achievable in general; this is "at-least-once with strong duplicate reduction," which is the honest framing.</p>
       </div>
 
       <div class="qa">

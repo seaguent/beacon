@@ -15,6 +15,7 @@ class EventOut(BaseModel):
     target_url: str
     payload: dict[str, Any]
     status: str
+    idempotency_key: str | None
     created_at: datetime
 
     class Config:

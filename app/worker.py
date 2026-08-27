@@ -1,14 +1,16 @@
 import json
+import os
 import time
 
 import requests
 
 from app.database import Base, SessionLocal, engine
 from app.models import DeliveryAttempt, Event
-from app.redis_client import DELIVERY_QUEUE, RETRY_QUEUE, redis_client
+from app.redis_client import DEAD_LETTER_QUEUE, DELIVERY_QUEUE, RETRY_QUEUE, redis_client
 
 Base.metadata.create_all(bind=engine)
 
+WORKER_ID = os.getpid()
 MAX_RETRIES = 4  # total attempts allowed before giving up
 BACKOFF_SCHEDULE = [5, 30, 120, 300]  # seconds to wait before attempt 2, 3, 4, 5
 
@@ -28,8 +30,9 @@ def promote_due_retries() -> None:
     now = time.time()
     due_members = redis_client.zrangebyscore(RETRY_QUEUE, 0, now)
     for member in due_members:
-        redis_client.zrem(RETRY_QUEUE, member)
-        redis_client.lpush(DELIVERY_QUEUE, member)
+        claimed = redis_client.zrem(RETRY_QUEUE, member)
+        if claimed:
+            redis_client.lpush(DELIVERY_QUEUE, member)
 
 
 def process_event(event_id: str, attempt_number: int = 1) -> None:
@@ -71,17 +74,18 @@ def process_event(event_id: str, attempt_number: int = 1) -> None:
             schedule_retry(str(event.id), attempt_number + 1, delay)
         else:
             event.status = "failed"
+            redis_client.lpush(DEAD_LETTER_QUEUE, str(event.id))
 
         db.add(attempt)
         db.commit()
 
-        print(f"[worker] event {event_id} attempt {attempt_number} -> {event.status} ({latency_ms}ms)")
+        print(f"[worker {WORKER_ID}] event {event_id} attempt {attempt_number} -> {event.status} ({latency_ms}ms)")
     finally:
         db.close()
 
 
 def main() -> None:
-    print("[worker] listening on delivery_queue...")
+    print(f"[worker {WORKER_ID}] listening on delivery_queue...")
     while True:
         promote_due_retries()
 

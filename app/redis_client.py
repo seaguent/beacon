@@ -11,3 +11,4 @@ redis_client = redis.from_url(REDIS_URL, decode_responses=True)
 
 DELIVERY_QUEUE = "delivery_queue"
 RETRY_QUEUE = "retry_queue"
+DEAD_LETTER_QUEUE = "dead_letter_queue"

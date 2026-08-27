@@ -17,7 +17,7 @@ Redis queue (delivery_queue)
 Worker(s) ---> HTTP POST to destination URL
   |
   +-- success -> status: delivered
-  +-- failure -> retry queue (exponential backoff: 5s / 30s / 120s / 300s)
+  +-- failure -> retry queue (increasing backoff: 5s / 30s / 120s)
                   |
                   +-- exhausted after 4 attempts -> dead-letter queue
 
@@ -30,11 +30,11 @@ The API writes the event to Postgres and pushes it onto a Redis queue, then retu
 
 **Async delivery.** A Redis-backed queue decouples ingestion from delivery.
 
-**Exponential backoff retries.** 5s, 30s, 120s, 300s across 4 attempts, using a Redis sorted set to schedule delayed re-queuing.
+**Increasing backoff retries.** 5s, then 30s, then 120s between attempts, 4 attempts total before dead-lettering, using a Redis sorted set to schedule delayed re-queuing.
 
 **Idempotency keys.** A duplicate `POST /events` with the same `Idempotency-Key` header returns the original event instead of creating a new one. Safe under concurrent duplicate requests because it's enforced by a database unique constraint, not just an application-level check.
 
-**Concurrency-safe workers.** Multiple worker replicas can run at once without double-processing a job. This was verified the hard way: scaling to 8 replicas during load testing surfaced a real deadlock, which got fixed (see Load Testing below).
+**Concurrency-safe workers.** Multiple workers safely compete for queued jobs and prevent duplicate retry promotion. This was verified the hard way: scaling to 8 replicas during load testing surfaced a real deadlock, which got fixed (see Load Testing below).
 
 **Dead-letter queue.** Events that exhaust all retries land in a separate failed state and can be manually replayed through `POST /events/{id}/retry`.
 
@@ -84,7 +84,11 @@ Three real bugs surfaced during this testing, not just numbers measured on a wor
 2. A single API process's internal thread pool saturated under load. Fixed by running multiple uvicorn worker processes.
 3. Every worker replica ran schema setup on startup. Scaling to 8 replicas caused all of them to race on a Postgres DDL lock at once, which triggered a real deadlock and silently killed every worker (no restart policy existed yet). Fixed by moving schema setup to run once from the API only, isolating per-job errors so a single bad job can't take down a worker process, and adding a restart policy.
 
-To run it yourself:
+To run it yourself, first bring up the fake receiver (it's gated behind a Compose profile so it doesn't run as part of the normal 5-service stack):
+```
+docker compose --profile loadtest up -d
+```
+Then:
 ```
 cd loadtest
 pip install -r requirements.txt

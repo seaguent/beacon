@@ -50,6 +50,7 @@ services:
   fake-receiver:
     build: .
     command: python loadtest/fake_receiver.py
+    profiles: ["loadtest"]
     volumes:
       - ./loadtest:/app/loadtest
     ports:

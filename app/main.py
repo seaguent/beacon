@@ -129,4 +129,7 @@ def retry_event(event_id: str, db: Session = Depends(get_db)):
 
 @app.get("/events/{event_id}", response_model=EventOut)
 def get_event(event_id: str, db: Session = Depends(get_db)):
-    return db.query(Event).filter(Event.id == event_id).first()
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if event is None:
+        raise HTTPException(status_code=404, detail="event not found")
+    return event

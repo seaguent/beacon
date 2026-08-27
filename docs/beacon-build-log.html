@@ -1,0 +1,844 @@
+<title>Beacon Build Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #f4f5f8;
+    --surface: #ffffff;
+    --surface-raised: #fbfbfd;
+    --border: #dde1e8;
+    --border-strong: #c5cbd6;
+    --text: #171a23;
+    --text-muted: #5b6472;
+    --text-faint: #8990a0;
+    --accent: #a86a1a;
+    --accent-strong: #8a5514;
+    --accent-tint: #fbf1e2;
+    --decision: #2f5fa8;
+    --decision-tint: #eef3fb;
+    --bug: #ab3a3a;
+    --bug-tint: #fbeeee;
+    --fix: #2f7d50;
+    --fix-tint: #edf6f0;
+    --code-bg: #eef0f4;
+    --shadow: 0 1px 2px rgba(20, 24, 34, 0.04), 0 8px 24px -12px rgba(20, 24, 34, 0.12);
+
+    --font-display: "Bricolage Grotesque", system-ui, sans-serif;
+    --font-body: "Public Sans", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12141a;
+      --surface: #191c24;
+      --surface-raised: #1f232c;
+      --border: #2b303c;
+      --border-strong: #3a4050;
+      --text: #e7e9ee;
+      --text-muted: #99a1b0;
+      --text-faint: #6b7280;
+      --accent: #e0a445;
+      --accent-strong: #f0b968;
+      --accent-tint: #2c2313;
+      --decision: #6e9fdc;
+      --decision-tint: #1a2433;
+      --bug: #dd8080;
+      --bug-tint: #2c1c1c;
+      --fix: #7ecb9a;
+      --fix-tint: #16261c;
+      --code-bg: #20242e;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #12141a;
+    --surface: #191c24;
+    --surface-raised: #1f232c;
+    --border: #2b303c;
+    --border-strong: #3a4050;
+    --text: #e7e9ee;
+    --text-muted: #99a1b0;
+    --text-faint: #6b7280;
+    --accent: #e0a445;
+    --accent-strong: #f0b968;
+    --accent-tint: #2c2313;
+    --decision: #6e9fdc;
+    --decision-tint: #1a2433;
+    --bug: #dd8080;
+    --bug-tint: #2c1c1c;
+    --fix: #7ecb9a;
+    --fix-tint: #16261c;
+    --code-bg: #20242e;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--decision); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, button:focus-visible, .navlink:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  .shell {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    max-width: 1320px;
+    margin: 0 auto;
+  }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 32px 20px 40px 32px;
+    border-right: 1px solid var(--border);
+  }
+
+  .brand {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 20px;
+    letter-spacing: 0.02em;
+    margin: 0 0 2px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .brand .dot { color: var(--accent); }
+  .brand-sub {
+    font-size: 12px;
+    color: var(--text-faint);
+    margin: 0 0 28px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .navgroup { margin-bottom: 22px; }
+  .navgroup-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin: 0 0 8px;
+  }
+  .navlink {
+    display: block;
+    padding: 5px 0;
+    font-size: 14px;
+    color: var(--text-muted);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    padding-left: 10px;
+    margin-left: -12px;
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+  .navlink:hover { color: var(--text); }
+  .navlink.active {
+    color: var(--accent-strong);
+    border-left-color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* ---------- Main content ---------- */
+  main { padding: 48px 56px 120px; min-width: 0; }
+
+  .hero {
+    margin-bottom: 56px;
+  }
+  .hero h1 {
+    font-family: var(--font-display);
+    font-size: clamp(32px, 4vw, 44px);
+    font-weight: 700;
+    line-height: 1.1;
+    text-wrap: balance;
+    margin: 0 0 14px;
+  }
+  .hero p.lede {
+    font-size: 18px;
+    color: var(--text-muted);
+    max-width: 62ch;
+    margin: 0 0 20px;
+  }
+  .hero .meta {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text-faint);
+  }
+
+  section.phase {
+    padding-top: 40px;
+    margin-top: 40px;
+    border-top: 1px solid var(--border);
+    scroll-margin-top: 24px;
+  }
+  section.phase:first-of-type { border-top: none; }
+
+  .phase-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent-strong);
+    margin: 0 0 8px;
+  }
+  .phase h2 {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 600;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+  .phase .dek {
+    color: var(--text-muted);
+    font-size: 15.5px;
+    margin: 0 0 22px;
+    max-width: 68ch;
+  }
+
+  .phase p, .phase li { max-width: 72ch; }
+  .phase h3 {
+    font-family: var(--font-display);
+    font-size: 16.5px;
+    font-weight: 600;
+    margin: 26px 0 10px;
+  }
+  .phase ul, .phase ol { padding-left: 22px; margin: 10px 0; }
+  .phase li { margin-bottom: 6px; }
+
+  code, .mono {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    background: var(--code-bg);
+    padding: 0.1em 0.4em;
+    border-radius: 3px;
+  }
+  pre {
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    line-height: 1.55;
+    max-width: 100%;
+  }
+  pre code { background: none; padding: 0; }
+
+  .callout {
+    border-left: 3px solid var(--border-strong);
+    background: var(--surface-raised);
+    padding: 14px 18px;
+    margin: 16px 0;
+    border-radius: 0 4px 4px 0;
+  }
+  .callout-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin: 0 0 6px;
+    display: block;
+  }
+  .callout p:last-child, .callout ul:last-child { margin-bottom: 0; }
+
+  .callout.decision { border-left-color: var(--decision); background: var(--decision-tint); }
+  .callout.decision .callout-label { color: var(--decision); }
+  .callout.bug { border-left-color: var(--bug); background: var(--bug-tint); }
+  .callout.bug .callout-label { color: var(--bug); }
+  .callout.fix { border-left-color: var(--fix); background: var(--fix-tint); }
+  .callout.fix .callout-label { color: var(--fix); }
+
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 16px 0;
+    max-width: 640px;
+  }
+  .metric { background: var(--surface); padding: 14px 16px; }
+  .metric-label {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin: 0 0 4px;
+  }
+  .metric-value {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .qa {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 18px 20px;
+    margin: 16px 0;
+    background: var(--surface);
+  }
+  .qa .q {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 15.5px;
+    margin: 0 0 8px;
+  }
+  .qa .q::before { content: "Q. "; color: var(--accent-strong); }
+  .qa .a { margin: 0; color: var(--text); }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0;
+    font-size: 14.5px;
+  }
+  th, td {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    font-weight: 600;
+  }
+  .table-wrap { overflow-x: auto; }
+
+  .end-note {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--text-faint);
+    font-size: 13.5px;
+  }
+
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; }
+    .sidebar {
+      position: relative;
+      height: auto;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      padding: 20px 20px 8px;
+    }
+    main { padding: 32px 20px 80px; }
+  }
+</style>
+
+<div class="shell">
+  <nav class="sidebar" aria-label="Table of contents">
+    <p class="brand"><span class="dot">&#9679;</span> Beacon</p>
+    <p class="brand-sub">Build Log</p>
+
+    <div class="navgroup">
+      <p class="navgroup-label">Start</p>
+      <a class="navlink" href="#overview">Overview</a>
+      <a class="navlink" href="#stack">Stack &amp; Tool Choices</a>
+    </div>
+
+    <div class="navgroup">
+      <p class="navgroup-label">Phases 1&ndash;13</p>
+      <a class="navlink" href="#phase-1">1. Ingestion</a>
+      <a class="navlink" href="#phase-2">2. Redis Queue</a>
+      <a class="navlink" href="#phase-3">3. Worker &amp; Delivery</a>
+      <a class="navlink" href="#phase-4">4. Retries &amp; Backoff</a>
+      <a class="navlink" href="#phase-5">5. Idempotency</a>
+      <a class="navlink" href="#phase-6">6. Concurrency Safety</a>
+      <a class="navlink" href="#phase-7">7. Dead-Letter Queue</a>
+      <a class="navlink" href="#phase-8">8. HMAC Signing</a>
+      <a class="navlink" href="#phase-9">9. Rate Limiting</a>
+      <a class="navlink" href="#phase-10">10. Dashboard</a>
+      <a class="navlink" href="#phase-11">11. Docker</a>
+      <a class="navlink" href="#phase-12">12. Load Testing</a>
+      <a class="navlink" href="#phase-13">13. AWS Deployment</a>
+    </div>
+
+    <div class="navgroup">
+      <p class="navgroup-label">Reference</p>
+      <a class="navlink" href="#qa">Interview Q&amp;A</a>
+      <a class="navlink" href="#limitations">Known Limitations</a>
+    </div>
+  </nav>
+
+  <main>
+    <header class="hero" id="overview">
+      <h1>Every decision behind Beacon, and why it was made that way.</h1>
+      <p class="lede">Beacon is a webhook delivery platform built from scratch across 13 phases: ingestion, an async delivery queue, retries, idempotency, concurrency-safe workers, a dead-letter queue, request signing, rate limiting, a live dashboard, containerization, real load testing, and a live AWS deployment. This document exists so every tool choice, every tradeoff, and every bug found along the way can be explained cold, not recited.</p>
+      <div class="meta">
+        <span>13 phases</span>
+        <span>&middot;</span>
+        <span>~700 lines of application code</span>
+        <span>&middot;</span>
+        <span>3 real production bugs found &amp; fixed under load</span>
+        <span>&middot;</span>
+        <span>Deployed live on AWS EC2</span>
+      </div>
+    </header>
+
+    <section class="phase" id="stack" style="border-top:none; padding-top:0; margin-top:0;">
+      <p class="phase-eyebrow">Foundations</p>
+      <h2>Stack &amp; tool choices</h2>
+      <p class="dek">Every tool below was picked for a specific reason, not by default. Here's the reasoning for each.</p>
+
+      <h3>Python + FastAPI</h3>
+      <p>FastAPI was chosen over Flask and Django. Flask has no built-in request validation or async support without extra libraries bolted on. Django is a full batteries-included web framework (templating, admin panel, ORM baked in) that's heavier than a focused API service needs. FastAPI gives automatic request validation from Python type hints (via Pydantic), automatic interactive API docs (the <code>/docs</code> Swagger UI came for free, no extra work), and native async support, for roughly the same amount of code as Flask.</p>
+
+      <h3>Uvicorn</h3>
+      <p>FastAPI only defines <em>how</em> to respond to a request; it doesn't listen on a network socket by itself. Uvicorn is the actual ASGI server process that accepts TCP connections, parses HTTP, and calls into the FastAPI app. This split (framework vs. server) is the same shape as Django+Gunicorn or Rails+Puma.</p>
+
+      <h3>PostgreSQL</h3>
+      <p>A relational database was chosen specifically because this project needs real transactional guarantees: idempotency keys rely on a database-level unique constraint (not just an application check) to be safe under concurrent duplicate requests, and event status + delivery attempt logging need to commit atomically together. Postgres's <code>JSONB</code> column type also let the event payload stay schema-flexible (any JSON shape) while everything else about the event stayed properly relational and queryable.</p>
+
+      <h3>SQLAlchemy</h3>
+      <p>Used as the ORM instead of writing raw SQL by hand, mainly for connection pooling control. That pooling configuration (<code>pool_size</code>, <code>max_overflow</code>) became directly relevant during load testing &mdash; the default pool size was one of three real bottlenecks found under concurrent load (see Phase 12).</p>
+
+      <h3>Redis</h3>
+      <p>Redis does three distinct jobs in this architecture, which is exactly why it was chosen over a heavier dedicated message broker like RabbitMQ, AWS SQS, or Kafka:</p>
+      <ul>
+        <li><strong>A list</strong> (<code>LPUSH</code>/<code>BRPOP</code>) as the main delivery queue &mdash; simple FIFO, no need for Kafka-style partitioned ordering or SQS-style visibility timeouts at this scale.</li>
+        <li><strong>A sorted set</strong> as a delay mechanism for scheduling retries &mdash; score by the timestamp a retry becomes due, which a plain list can't express at all.</li>
+        <li><strong>Atomic counters</strong> (<code>INCR</code>) for the rate limiter &mdash; race-free without any extra locking.</li>
+      </ul>
+      <p>One in-memory store covering all three roles kept the architecture simple. RabbitMQ or Kafka would have added real operational complexity (clustering, topic/exchange configuration) that this project's actual scale never justified.</p>
+
+      <h3>Next.js + TypeScript</h3>
+      <p>The dashboard is a small, single-page, client-heavy app &mdash; a plain React SPA (via Vite, say) would have worked too, but Next.js's built-in dev server, file-based routing, and production build pipeline meant less setup for the same result. TypeScript catches type mistakes (like a mismatched API response shape) at compile time instead of at runtime in a user's browser.</p>
+
+      <h3>Docker + Docker Compose</h3>
+      <p>Every service (API, worker, Postgres, Redis, dashboard) runs in its own container, defined in one <code>docker-compose.yml</code>. This makes the whole system reproducible with a single command on any machine, and is also literally how it's deployed to AWS &mdash; the same file that runs locally runs in production.</p>
+
+      <h3>AWS EC2</h3>
+      <p>EC2 was chosen over AWS Lambda specifically because this system has a <strong>persistent background process</strong> &mdash; the worker sits in a loop polling Redis, which doesn't fit serverless's request-in/response-out model at all. EC2 was chosen over ECS/Fargate (container orchestration services) because a single EC2 instance running Docker Compose is functionally identical for a project at this scale, without needing to learn or configure a separate orchestration layer, task definitions, or a load balancer.</p>
+
+      <h3>Locust</h3>
+      <p>Locust is Python-native, so load-testing scripts live in the same language as the rest of the project, versus k6 (JavaScript) or JMeter (XML config, GUI-first). It also generates real percentile latency reports (p50/p95/p99) out of the box.</p>
+
+      <h3>GitHub Actions</h3>
+      <p>Free, and tied directly to the GitHub repo with no separate CI service to configure or pay for.</p>
+    </section>
+
+    <section class="phase" id="phase-1">
+      <p class="phase-eyebrow">Phase 1</p>
+      <h2>Ingestion: FastAPI &rarr; PostgreSQL</h2>
+      <p class="dek"><code>POST /events</code> validates a request and persists it. No queue yet &mdash; the simplest possible slice that could be tested end to end.</p>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p>UUIDs were used as primary keys instead of auto-incrementing integers. An auto-increment ID requires a round-trip to the database to know the "next" value, which becomes a real bottleneck once multiple processes (API replicas, workers) are inserting concurrently. A UUID can be generated client-side or worker-side with no coordination at all.</p>
+      </div>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p>The event payload is stored as <code>JSONB</code> rather than plain text. Postgres can index and query <em>inside</em> a JSONB column later (e.g. "find every event where payload.type = order.created") without deserializing every row in application code first.</p>
+      </div>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p>Two separate Pydantic schemas exist &mdash; <code>EventCreate</code> for what a client is allowed to send, and <code>EventOut</code> for what gets returned &mdash; instead of reusing the database model directly. This is a deliberate boundary: a client should never be able to set <code>status</code> or <code>id</code> on creation; the server owns those.</p>
+      </div>
+
+      <h3>Request lifecycle</h3>
+      <ol>
+        <li>Uvicorn accepts the TCP connection and parses the HTTP request.</li>
+        <li>Pydantic validates the JSON body against <code>EventCreate</code> &mdash; a malformed request is rejected here, before any application code runs.</li>
+        <li>FastAPI's dependency injection (<code>Depends(get_db)</code>) hands the route a database session, and guarantees it's closed afterward via a <code>finally</code> block, even if the request raises an exception.</li>
+        <li>The event is inserted and committed; the response is serialized through <code>EventOut</code>.</li>
+      </ol>
+    </section>
+
+    <section class="phase" id="phase-2">
+      <p class="phase-eyebrow">Phase 2</p>
+      <h2>The Redis queue</h2>
+      <p class="dek">After saving to Postgres, the event's ID gets pushed onto a Redis list. This is the single most important architectural decision in the whole project.</p>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p><strong>Why a queue at all:</strong> without one, <code>POST /events</code> would have to make the actual HTTP call to the destination synchronously. A slow or hung destination server would then make the ingestion API itself hang. The queue means "accept the event" and "deliver the event" are decoupled &mdash; a dead downstream server can never block ingestion.</p>
+      </div>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p>Only the event <strong>ID</strong> is queued, not the full payload. Postgres stays the single source of truth; if the two ever needed to be inspected or reconciled, there's one place to look, not two that could drift out of sync.</p>
+      </div>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p><code>LPUSH</code> (push left) paired with <code>BRPOP</code> (pop right) makes this a FIFO queue. Pushing and popping from the same end would make it LIFO &mdash; under a burst of traffic, old events could get starved indefinitely behind a constant stream of new ones.</p>
+      </div>
+    </section>
+
+    <section class="phase" id="phase-3">
+      <p class="phase-eyebrow">Phase 3</p>
+      <h2>The worker &amp; real delivery</h2>
+      <p class="dek">A separate, standalone Python process that pulls jobs off the queue and does the actual HTTP delivery.</p>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p>The worker is a fully separate process from the API, not a background thread inside it. This means the API and the delivery pipeline can scale independently &mdash; more delivery volume means running more worker replicas, without touching the API at all.</p>
+      </div>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p><code>requests.post(..., timeout=10)</code> &mdash; without an explicit timeout, a destination that accepts the connection but never responds would hang the worker <em>forever</em>, since the worker processes one job at a time.</p>
+      </div>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p>Failures are split into two distinct cases: <code>response.ok</code> being false (the destination responded, but with an error status) versus a caught <code>requests.RequestException</code> (no response was ever received at all &mdash; DNS failure, connection refused, or the timeout firing). These get logged differently: the first has a real <code>response_status</code>; the second has none, but does have an <code>error</code> message.</p>
+      </div>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p><code>time.monotonic()</code> is used to measure delivery latency, not <code>time.time()</code>. The wall clock can jump backward (NTP sync, DST, manual changes) and produce a negative duration; a monotonic clock is guaranteed to only move forward.</p>
+      </div>
+    </section>
+
+    <section class="phase" id="phase-4">
+      <p class="phase-eyebrow">Phase 4</p>
+      <h2>Retries with increasing backoff</h2>
+      <p class="dek">A failed delivery isn't permanent after one try. It's retried up to 4 attempts total, with increasing delay between them: 5s, then 30s, then 120s, before dead-lettering.</p>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p>A Redis <strong>sorted set</strong> schedules delayed retries, scored by the unix timestamp each one becomes due. A plain list has no concept of "wait until later" &mdash; a sorted set lets the worker ask "what's due right now?" in one call (<code>ZRANGEBYSCORE</code>).</p>
+      </div>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p>The queue payload changed from a bare event ID to a small JSON object (<code>{event_id, attempt_number}</code>). Once retries exist, the queue needs to carry the attempt count forward too &mdash; a bare ID alone would lose that information every time a job got re-queued.</p>
+      </div>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p>A fixed backoff schedule was used instead of a pure exponential formula. It's predictable, easy to reason about, and easy to demo &mdash; a formula with no cap could in theory grow the wait time unboundedly.</p>
+      </div>
+    </section>
+
+    <section class="phase" id="phase-5">
+      <p class="phase-eyebrow">Phase 5</p>
+      <h2>Idempotency keys</h2>
+      <p class="dek">A client can safely retry a <code>POST /events</code> call (say, after a network timeout where it's unsure the first attempt landed) without creating a duplicate event, by sending an <code>Idempotency-Key</code> header &mdash; the same pattern Stripe and GitHub use.</p>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p>The real safety net is a <strong>database-level unique constraint</strong> on the idempotency key column, not just an application-level "check if it exists first" query. A check-then-insert has a race condition: two identical requests arriving at the exact same instant could both pass the check before either has committed. The unique constraint makes Postgres itself reject the second insert, which gets caught and turned into "return the existing row" instead.</p>
+      </div>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p>Postgres allows multiple <code>NULL</code> values under a unique constraint (NULLs are never considered equal to each other in SQL), so events created without an idempotency key are completely unaffected by this constraint.</p>
+      </div>
+    </section>
+
+    <section class="phase" id="phase-6">
+      <p class="phase-eyebrow">Phase 6</p>
+      <h2>Concurrency safety</h2>
+      <p class="dek">Can two workers ever claim and deliver the same job? This phase found a real bug proving the answer was briefly "yes."</p>
+
+      <div class="callout bug">
+        <span class="callout-label">Bug found</span>
+        <p>The retry-promotion logic did <code>ZRANGEBYSCORE</code> (read what's due) followed by <code>ZREM</code> (delete it) as two separate Redis calls. If two workers called this at the same instant, both could see the same due retry <em>before</em> either removed it &mdash; and both would push it onto the delivery queue, causing the same event to be delivered twice to a real destination.</p>
+      </div>
+
+      <div class="callout fix">
+        <span class="callout-label">Fix</span>
+        <p>Use <code>ZREM</code>'s own return value (0 or 1, however many members it actually removed) as an atomic "did I win the claim" check. Only push the job forward if the removal actually succeeded. Whichever worker's delete call wins is the only one that proceeds &mdash; the delete operation itself doubles as the claim.</p>
+      </div>
+
+      <p><code>BRPOP</code> on the main delivery queue was already safe without any changes &mdash; Redis guarantees only one caller ever receives a given list item, no matter how many workers are calling <code>BRPOP</code> concurrently.</p>
+
+      <div class="callout">
+        <span class="callout-label" style="color:var(--text-faint)">Known limitation</span>
+        <p>If a worker crashes <em>after</em> <code>BRPOP</code> removes a job from the queue but <em>before</em> it finishes processing, that job is simply gone &mdash; no other worker will ever see it again. A production-grade fix would use a "visibility timeout" pattern: move the job into a per-worker in-progress list on pop, only remove it for good after a successful commit, and sweep stale in-progress jobs back onto the queue after a timeout. This wasn't implemented; it's a legitimate answer to "what would you improve given more time."</p>
+      </div>
+    </section>
+
+    <section class="phase" id="phase-7">
+      <p class="phase-eyebrow">Phase 7</p>
+      <h2>Dead-letter queue</h2>
+      <p class="dek">An event that exhausts all 4 retry attempts doesn't just disappear into a <code>failed</code> status buried in a table &mdash; it becomes something explicitly visible and recoverable.</p>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p>Two things happen on final failure: the event's ID goes onto a dedicated Redis list (<code>dead_letter_queue</code>, an operational signal), and <code>GET /events/dead-letter</code> queries Postgres directly for anything with <code>status = "failed"</code> (the reliable source of truth for actually listing them). A manual replay endpoint, <code>POST /events/{id}/retry</code>, resets the event to <code>pending</code> and re-queues it from attempt 1.</p>
+      </div>
+
+      <p>The real-world motivation: if a customer's server is down for an hour during a deploy, any webhook that fails during that window shouldn't be lost forever once it exhausts retries. Once they fix their server, the failed events can be found and replayed.</p>
+    </section>
+
+    <section class="phase" id="phase-8">
+      <p class="phase-eyebrow">Phase 8</p>
+      <h2>HMAC request signing</h2>
+      <p class="dek">Every delivery includes an <code>X-Beacon-Signature</code> header so the receiving server can verify the request genuinely came from Beacon and wasn't forged or tampered with in transit.</p>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p>The payload is serialized to bytes <em>exactly once</em>, and those exact bytes are both signed and sent as the literal request body &mdash; instead of signing a Python dict and letting the HTTP client serialize it separately. Two independent serializations of "the same" data aren't guaranteed to produce byte-identical output (key ordering, spacing), and a receiver re-hashing the raw bytes it actually received would then fail verification even though nothing was actually wrong.</p>
+      </div>
+
+      <div class="callout" style="border-left-color:var(--text-faint)">
+        <span class="callout-label" style="color:var(--text-faint)">Scope simplification</span>
+        <p>A production multi-tenant system would use a secret <em>per registered destination</em> (the way Stripe does &mdash; one webhook secret configured once per endpoint in your dashboard, reused for every event sent there). Beacon has no endpoint-registration concept, so a single global signing secret is used for the whole instance. Worth being able to say out loud as a deliberate scope choice, not an oversight.</p>
+      </div>
+    </section>
+
+    <section class="phase" id="phase-9">
+      <p class="phase-eyebrow">Phase 9</p>
+      <h2>Rate limiting</h2>
+      <p class="dek">A fixed-window counter, applied per client IP, protects the ingestion API from being hammered.</p>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p>A <strong>fixed-window counter</strong> (<code>INCR</code> + <code>EXPIRE</code>) was used instead of a token bucket, deliberately, right after the Phase 6 lesson. <code>INCR</code> is atomic in Redis, so this stays race-free under concurrent requests from the same IP with zero extra locking. A token bucket's read-modify-write cycle would reintroduce the exact class of race that Phase 6 found and fixed.</p>
+      </div>
+
+      <p>The tradeoff: fixed windows allow a small burst right at the window boundary (e.g. 20 requests at :59 and another 20 at :00 &mdash; 40 in about a second). A sliding window or true token bucket smooths that out, but needs a Lua script to stay atomic. That tradeoff is a legitimate, informed choice for this project's scale.</p>
+
+      <div class="callout bug">
+        <span class="callout-label">Bug found (Phase 12)</span>
+        <p>The rate limit override used for load testing (<code>RATE_LIMIT_MAX_REQUESTS=100000</code>) was accidentally left as a <em>permanent default</em> in the deployment config, which meant the live AWS deployment had rate limiting effectively disabled for anyone, silently. Caught during a final review pass and fixed by removing the override from the default config entirely &mdash; it's now something deliberately re-added only for the duration of an actual load test, then removed again.</p>
+      </div>
+    </section>
+
+    <section class="phase" id="phase-10">
+      <p class="phase-eyebrow">Phase 10</p>
+      <h2>The dashboard</h2>
+      <p class="dek">A live view of event status, success rate, and latency &mdash; polling every 4 seconds.</p>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p>Deliberately designed to avoid the generic "AI-built dashboard" look (gradient hero cards, glassmorphism, an indigo/purple default palette). Typography uses IBM Plex Sans for interface labels and IBM Plex Mono specifically for data values (status, IDs, timestamps, latency numbers) &mdash; that split is functional, not decorative: mono marks "this is a real data value," sans marks interface chrome.</p>
+      </div>
+
+      <p>The <code>GET /stats</code> endpoint computes success rate and average latency with real SQL aggregates (<code>AVG()</code> over the delivery attempts table), not client-side math over a fetched list.</p>
+    </section>
+
+    <section class="phase" id="phase-11">
+      <p class="phase-eyebrow">Phase 11</p>
+      <h2>Docker: the whole stack, one command</h2>
+      <p class="dek">API, worker, dashboard, Postgres, and Redis all run as containers, defined in one <code>docker-compose.yml</code>. A sixth service, the load-testing fake receiver, lives in the same file but sits behind a Compose profile so it never starts as part of the normal stack.</p>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p>The dashboard's Docker build uses <strong>3 stages</strong> (<code>deps</code> &rarr; <code>builder</code> &rarr; <code>runner</code>). The final image only copies in the <em>built</em> output and production <code>node_modules</code>, not the full Node dev toolchain used to build it &mdash; smaller image, no leaked build-time tooling.</p>
+      </div>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p>Containers reach each other by <strong>Docker Compose service name</strong> (<code>postgres</code>, <code>redis</code>), never <code>localhost</code>. Inside a container, <code>localhost</code> means that container itself, not a sibling container. The one exception: the dashboard's browser-side fetch calls correctly still use the externally-reachable host, because that code executes in the <em>viewer's</em> browser on the host machine, not inside the Docker network.</p>
+      </div>
+
+      <div class="callout fix">
+        <span class="callout-label">Fix</span>
+        <p><code>ENV PYTHONUNBUFFERED=1</code> in the Dockerfile. Python fully buffers stdout when it isn't attached to a real terminal, which meant worker logs were silently invisible in <code>docker compose logs</code> until enough output accumulated to force a flush &mdash; a real, repeatedly-annoying debugging obstacle during development, fixed with one line.</p>
+      </div>
+    </section>
+
+    <section class="phase" id="phase-12">
+      <p class="phase-eyebrow">Phase 12</p>
+      <h2>Load testing: found real bugs, not just numbers</h2>
+      <p class="dek">Built a Locust load test and a deliberately flaky fake receiver (80% success / 10% error / 5% slow / 5% disconnect) to generate real numbers under real failure conditions &mdash; and along the way, found three genuine production bugs.</p>
+
+      <div class="callout bug">
+        <span class="callout-label">Bug 1 &mdash; connection pool exhaustion</span>
+        <p><code>create_engine(DATABASE_URL)</code> never configured a pool size, so SQLAlchemy used its default: 5 base connections + 10 overflow = 15 max. Under 500 concurrent producers, requests beyond that ceiling queued for a connection and hit SQLAlchemy's default 30-second wait timeout, which showed up as response times clustering at exactly 30000&ndash;31000ms before failing with a 500. Confirmed directly in the logs: <code>QueuePool limit of size 5 overflow 10 reached, connection timed out, timeout 30.00</code>.</p>
+      </div>
+      <div class="callout fix">
+        <span class="callout-label">Fix</span>
+        <p>Explicitly sized the pool (<code>pool_size</code>, <code>max_overflow</code>), then rebalanced per-process once multiple uvicorn processes were added (each process gets its own independent pool, so 4 processes &times; a pool sized for one process could exceed Postgres's own connection ceiling).</p>
+      </div>
+
+      <div class="callout bug">
+        <span class="callout-label">Bug 2 &mdash; single-process saturation</span>
+        <p>Even with the pool fixed, a single uvicorn process's internal thread pool (used to run synchronous route handlers) saturated under load &mdash; and backed up <em>unrelated</em> traffic too: the dashboard's own background polling started hanging behind the load test's requests, since everything shared one process's limited thread pool.</p>
+      </div>
+      <div class="callout fix">
+        <span class="callout-label">Fix</span>
+        <p>Ran uvicorn with <code>--workers 4</code> &mdash; 4 separate OS processes sharing the load instead of one.</p>
+      </div>
+
+      <div class="callout bug">
+        <span class="callout-label">Bug 3 &mdash; the real one: a multi-replica deadlock</span>
+        <p>Every worker container ran schema setup (<code>Base.metadata.create_all()</code>) at startup. Scaling to 8 worker replicas at once (<code>docker compose up -d --scale worker=8</code>) meant all 8 tried to run that DDL check simultaneously &mdash; and Postgres genuinely deadlocked between them: <code>psycopg2.errors.DeadlockDetected</code>. Worse, nothing caught that exception in the worker's main loop, so it crashed the process outright, and with no restart policy configured, <strong>all 8 workers silently died and stayed dead</strong>. The delivery pipeline had completely stopped with zero indication why &mdash; it just looked stalled.</p>
+      </div>
+      <div class="callout fix">
+        <span class="callout-label">Fix (three parts)</span>
+        <ul>
+          <li>Removed schema creation from the worker entirely &mdash; it now lives only in the API, run exactly once.</li>
+          <li>Wrapped the per-job processing call in a try/except, so one bad job (a deadlock, a network blip, anything) gets logged and skipped instead of crashing the whole process.</li>
+          <li>Added <code>restart: unless-stopped</code> as defense-in-depth, in case something else unexpected still slips through.</li>
+        </ul>
+      </div>
+
+      <h3>Real measured numbers</h3>
+      <div class="metrics">
+        <div class="metric"><p class="metric-label">Peak throughput</p><p class="metric-value">650 req/s</p></div>
+        <div class="metric"><p class="metric-label">Requests / 60s</p><p class="metric-value">39,140</p></div>
+        <div class="metric"><p class="metric-label">Failure rate</p><p class="metric-value">0%</p></div>
+        <div class="metric"><p class="metric-label">p50 latency</p><p class="metric-value">430ms</p></div>
+        <div class="metric"><p class="metric-label">p95 latency</p><p class="metric-value">640ms</p></div>
+        <div class="metric"><p class="metric-label">p99 latency</p><p class="metric-value">810ms</p></div>
+      </div>
+      <p>A separate, tracked-to-completion run against the flaky receiver (2,428 events) measured <strong>99.6% eventual delivery success</strong> &mdash; close to the theoretical prediction: since each attempt independently has roughly an 80% success chance, the odds of an event failing all 4 attempts are about 0.2<sup>4</sup> &asymp; 0.16%, meaning &asymp;99.84% should eventually succeed within the retry budget.</p>
+
+      <div class="callout" style="border-left-color:var(--text-faint)">
+        <span class="callout-label" style="color:var(--text-faint)">Honest note</span>
+        <p>Peak-throughput numbers varied noticeably between runs on this laptop (190&ndash;650 req/s for identical code) because Locust itself competes for the same CPU as the containers it's testing. This is a well-known limitation of laptop-based load testing, not a code regression &mdash; real load testing infrastructure runs the load generator and the system under test on separate machines specifically to avoid this. The correctness of the fixes was verified independently of the exact throughput number, by confirming zero crashes across repeated 8-worker scale-up tests.</p>
+      </div>
+    </section>
+
+    <section class="phase" id="phase-13">
+      <p class="phase-eyebrow">Phase 13</p>
+      <h2>AWS deployment</h2>
+      <p class="dek">Everything up to this point only ever ran on a laptop. This phase proves it runs on a real server anyone could reach over the internet.</p>
+
+      <div class="callout decision">
+        <span class="callout-label">Decision</span>
+        <p>A <code>t3.small</code> EC2 instance (Ubuntu), not a bigger/managed setup &mdash; the goal was proving deployability, not re-running the load test against the cloud. RDS/ElastiCache (managed Postgres/Redis) were deliberately skipped in favor of running them as containers on the same instance via the same <code>docker-compose.yml</code> already used locally &mdash; simpler, and the whole point was reusing the existing recipe, not building separate cloud-native infrastructure for a portfolio-scale deployment.</p>
+      </div>
+
+      <div class="callout bug">
+        <span class="callout-label">Bug found &mdash; hardcoded localhost</span>
+        <p>The dashboard's API address was hardcoded as <code>http://localhost:8000</code>. That's correct when the browser and the API run on the same machine, but breaks the moment the dashboard is loaded from a remote server: "localhost" in that JavaScript means <em>the viewer's own laptop</em>, not the server it was served from. This bug was invisible for the entire project until the exact moment a real remote deployment was attempted.</p>
+      </div>
+      <div class="callout fix">
+        <span class="callout-label">Fix</span>
+        <p>Derive the API address dynamically from <code>window.location.hostname</code> at runtime, so it resolves correctly whether the page was loaded from <code>localhost</code> or a real server's IP.</p>
+      </div>
+
+      <div class="callout bug">
+        <span class="callout-label">Bug found &mdash; CORS hardcoded to localhost</span>
+        <p>The API's CORS policy only allowed <code>http://localhost:3000</code> as an origin. Once the dashboard was served from a different address, every request from it would have been silently rejected by the browser's CORS check.</p>
+      </div>
+      <div class="callout fix">
+        <span class="callout-label">Fix</span>
+        <p>Widened to allow all origins for this single-tenant demo deployment &mdash; an acceptable simplification given the project's actual scope, not a production multi-tenant security posture.</p>
+      </div>
+
+      <h3>Infrastructure notes</h3>
+      <ul>
+        <li>Security group opened ports 22 (SSH), 8000 (API), and 3000 (dashboard).</li>
+        <li>SSH access is key-pair only, no password auth &mdash; the default and the safer option even with the security group open to all IPs.</li>
+        <li>An AWS budget alert was configured to email at a low spend threshold as an early warning, separate from (and cheaper to check than) manually watching the AWS bill.</li>
+        <li>HTTPS was deliberately not pursued for this deployment &mdash; it would require owning a domain name (recurring cost) and a reverse proxy with a TLS certificate, real infrastructure work disproportionate to a demo instance meant to be spun up and torn down. Certificate authorities won't issue a trusted cert for a bare IP address at all.</li>
+      </ul>
+    </section>
+
+    <section class="phase" id="qa" style="border-top:1px solid var(--border); margin-top:56px; padding-top:40px;">
+      <p class="phase-eyebrow">Reference</p>
+      <h2>Interview Q&amp;A</h2>
+      <p class="dek">Questions this project is likely to invite, with the answer already worked out.</p>
+
+      <div class="qa">
+        <p class="q">Why Redis instead of just using Postgres for the queue?</p>
+        <p class="a">Redis is purpose-built for exactly this: fast in-memory operations, native list and sorted-set data structures that map directly onto "a queue" and "a delayed schedule," and atomic counters for rate limiting. Polling a Postgres table for "unprocessed rows" works but adds real load to the same database handling all the relational data, and doesn't have a clean native primitive for delayed retries the way a sorted set does.</p>
+      </div>
+
+      <div class="qa">
+        <p class="q">How do you prevent duplicate webhook deliveries?</p>
+        <p class="a">Two separate mechanisms, for two separate failure modes. Idempotency keys prevent a client from accidentally creating the same event twice (enforced by a database unique constraint, safe under concurrent requests). Separately, the atomic <code>ZREM</code>-as-claim pattern in the retry-promotion logic prevents two <em>workers</em> from both delivering the same already-queued job.</p>
+      </div>
+
+      <div class="qa">
+        <p class="q">What happens if a worker crashes mid-delivery?</p>
+        <p class="a">Honestly: that job is lost right now. <code>BRPOP</code> removes it from the queue the instant it's picked up, before processing finishes, so a crash between pop and commit means no other worker will ever see it again. The correct production fix is a visibility-timeout pattern (move to a per-worker in-progress list on pop, sweep stale entries back onto the queue after a timeout) &mdash; not implemented here, and a good example of a real, named tradeoff rather than an unknown gap.</p>
+      </div>
+
+      <div class="qa">
+        <p class="q">What was the hardest bug you found?</p>
+        <p class="a">The multi-replica startup deadlock in Phase 12. Every worker independently ran schema setup at startup; scaling to 8 replicas caused all of them to collide on a Postgres DDL lock simultaneously, which deadlocked, which crashed every worker with no restart policy in place &mdash; and the failure mode looked like nothing at all was happening, not like an error. Diagnosing it meant checking container statuses, reading the actual Postgres error message, and reasoning through why 8 simultaneous "check if the table exists" operations could deadlock at all.</p>
+      </div>
+
+      <div class="qa">
+        <p class="q">How would you scale this further?</p>
+        <p class="a">Horizontally on the worker side, which is already proven safe (Phase 6). On the API side, more uvicorn processes or more container replicas behind a load balancer. On the database side, the connection pool tuning from Phase 12 would need revisiting again at a larger scale, and a managed Postgres (RDS) with read replicas would be the next real step. The retry visibility-timeout gap from Phase 6 would also need addressing before scaling workers much further under real production traffic.</p>
+      </div>
+
+      <div class="qa">
+        <p class="q">Why backoff between retries instead of retrying immediately?</p>
+        <p class="a">An immediate retry against a downstream service that's struggling (rate-limited, overloaded, mid-restart) just adds more load to something already failing, and wastes a retry attempt on a problem that hasn't had time to resolve. Backoff gives the destination time to recover. The schedule (5s/30s/120s) is a hand-picked increasing sequence, not a true exponential formula &mdash; it's predictable and easy to demo, at the cost of not following a strict constant-ratio curve the way "exponential backoff" technically implies.</p>
+      </div>
+    </section>
+
+    <section id="limitations" style="margin-top:56px; padding-top:40px; border-top:1px solid var(--border);">
+      <p class="phase-eyebrow">Reference</p>
+      <h2>Known limitations</h2>
+      <p class="dek">Said out loud, on purpose &mdash; naming these is more credible than pretending they don't exist.</p>
+      <ul>
+        <li>No worker crash-recovery (visibility-timeout) pattern &mdash; a job popped from the queue is lost if the worker dies before finishing it.</li>
+        <li>HMAC signing uses one global secret per instance, not a secret per registered destination (no endpoint-registration concept exists).</li>
+        <li>Rate limiting uses a fixed window, which allows a small burst at the window boundary; a sliding window or token bucket would smooth that at the cost of needing a Lua script to stay atomic.</li>
+        <li>No HTTPS on the AWS deployment &mdash; a deliberate scope decision for a demo instance, not an oversight.</li>
+        <li>No automated test suite; CI verifies the Docker images build (and the dashboard's TypeScript compiles) but doesn't execute or test the Python application code.</li>
+      </ul>
+    </section>
+
+    <p class="end-note">Built across 13 phases. Every design decision, bug, and fix on this page happened during actual development, not written up after the fact.</p>
+  </main>
+</div>
+
+<script>
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.navlink'));
+    var sections = links
+      .map(function (l) { return document.querySelector(l.getAttribute('href')); })
+      .filter(Boolean);
+
+    if (!('IntersectionObserver' in window) || sections.length === 0) return;
+
+    var byId = {};
+    links.forEach(function (l) { byId[l.getAttribute('href').slice(1)] = l; });
+
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        var link = byId[entry.target.id];
+        if (!link) return;
+        if (entry.isIntersecting) {
+          links.forEach(function (l) { l.classList.remove('active'); });
+          link.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-10% 0px -75% 0px', threshold: 0 });
+
+    sections.forEach(function (s) { observer.observe(s); });
+  })();
+</script>

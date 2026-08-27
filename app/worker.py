@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import json
 import os
 import time
@@ -13,6 +15,11 @@ Base.metadata.create_all(bind=engine)
 WORKER_ID = os.getpid()
 MAX_RETRIES = 4  # total attempts allowed before giving up
 BACKOFF_SCHEDULE = [5, 30, 120, 300]  # seconds to wait before attempt 2, 3, 4, 5
+WEBHOOK_SIGNING_SECRET = os.environ["WEBHOOK_SIGNING_SECRET"]
+
+
+def sign_payload(payload_bytes: bytes) -> str:
+    return hmac.new(WEBHOOK_SIGNING_SECRET.encode(), payload_bytes, hashlib.sha256).hexdigest()
 
 
 def get_backoff_seconds(attempt_number: int) -> int:
@@ -43,9 +50,16 @@ def process_event(event_id: str, attempt_number: int = 1) -> None:
             print(f"[worker] event {event_id} not found, skipping")
             return
 
+        payload_bytes = json.dumps(event.payload).encode()
+        signature = sign_payload(payload_bytes)
+        headers = {
+            "Content-Type": "application/json",
+            "X-Beacon-Signature": f"sha256={signature}",
+        }
+
         start = time.monotonic()
         try:
-            response = requests.post(event.target_url, json=event.payload, timeout=10)
+            response = requests.post(event.target_url, data=payload_bytes, headers=headers, timeout=10)
             latency_ms = int((time.monotonic() - start) * 1000)
             success = response.ok
             attempt = DeliveryAttempt(

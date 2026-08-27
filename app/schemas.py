@@ -20,3 +20,10 @@ class EventOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class StatsOut(BaseModel):
+    total_events: int
+    events_today: int
+    success_rate: float
+    avg_latency_ms: int
